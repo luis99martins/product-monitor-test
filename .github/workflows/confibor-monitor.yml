@@ -31,12 +31,14 @@ jobs:
 
       - name: Guardar estado no repositório
         run: |
-          if git diff --quiet; then
-            echo "Sem alterações para gravar."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add confibor_state.json
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Sem alterações para gravar."
+            exit 0
+          fi
+
           git commit -m "Atualiza estado do monitor Confibor"
           git push
