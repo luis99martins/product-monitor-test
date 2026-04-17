@@ -36,14 +36,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          git pull --rebase origin main
+
           git add confibor_state.json
 
-          if [ -z "$(git status --porcelain)" ]; then
+          if [ -z "$(git status --porcelain confibor_state.json)" ]; then
             echo "Sem alterações para gravar."
-            exit 0
+          exit 0
           fi
 
-          git pull --rebase origin main
-          git add confibor_state.json
           git commit -m "Atualiza estado do monitor Confibor"
           git push origin main
