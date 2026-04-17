@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Instalar Python
         uses: actions/setup-python@v6
@@ -28,11 +30,12 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python monitor_confibor.py
-
+      
       - name: Guardar estado no repositório
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add confibor_state.json
 
           if [ -z "$(git status --porcelain)" ]; then
@@ -40,5 +43,7 @@ jobs:
             exit 0
           fi
 
+          git pull --rebase origin main
+          git add confibor_state.json
           git commit -m "Atualiza estado do monitor Confibor"
-          git push
+          git push origin main
