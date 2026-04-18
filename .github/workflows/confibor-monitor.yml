@@ -6,44 +6,41 @@ on:
     - cron: '*/5 * * * *'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   run-monitor:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v6
+      
+      - name: Restaurar estado anterior
+        id: cache-restore
+        uses: actions/cache/restore@v4
         with:
-          fetch-depth: 0
-
+          path: confibor_state.json
+          key: confibor-state-${{ github.run_number }}
+          restore-keys: |
+            confibor-state-
+      
       - name: Instalar Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-
+      
       - name: Instalar dependências
         run: pip install requests beautifulsoup4
-
+      
       - name: Executar monitor
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python monitor_confibor.py
+        run: python monitor_confibor.py --state-file confibor_state.json
       
-      - name: Guardar estado no repositório
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git pull --rebase origin main
-
-          git add confibor_state.json
-
-          if [ -z "$(git status --porcelain confibor_state.json)" ]; then
-            echo "Sem alterações para gravar."
-          exit 0
-          fi
-
-          git commit -m "Atualiza estado do monitor Confibor"
-          git push origin main
+      - name: Guardar novo estado
+        uses: actions/cache/save@v4
+        if: always()  # Guarda mesmo se houver erro
+        with:
+          path: confibor_state.json
+          key: confibor-state-${{ github.run_number }}
