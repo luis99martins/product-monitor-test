@@ -3,7 +3,7 @@ name: Confibor monitor
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/5 * * * *'  # A cada 15 minutos
 
 permissions:
   contents: read
@@ -16,12 +16,16 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v6
       
+      - name: Obter data atual
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      
       - name: Restaurar estado anterior
         id: cache-restore
         uses: actions/cache/restore@v4
         with:
           path: confibor_state.json
-          key: confibor-state-${{ github.run_number }}
+          key: confibor-state-${{ steps.date.outputs.date }}
           restore-keys: |
             confibor-state-
       
@@ -43,4 +47,4 @@ jobs:
         if: always()  # Guarda mesmo se houver erro
         with:
           path: confibor_state.json
-          key: confibor-state-${{ github.run_number }}
+          key: confibor-state-${{ steps.date.outputs.date }}
