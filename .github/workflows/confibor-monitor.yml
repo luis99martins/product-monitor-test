@@ -6,17 +6,33 @@ on:
     - cron: '*/5 * * * *'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   run-monitor:
     runs-on: ubuntu-latest
+    
+    concurrency:
+      group: confibor-monitor
+      cancel-in-progress: true
 
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v6
+
+      - name: Obter data atual
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Restaurar estado anterior
+        id: cache-restore
+        uses: actions/cache/restore@v4
         with:
-          fetch-depth: 0
+          path: confibor_state.json
+          key: confibor-state-${{ steps.date.outputs.date }}
+          restore-keys: |
+            confibor-state-${{ steps.date.outputs.date }}-
+            confibor-state-
 
       - name: Instalar Python
         uses: actions/setup-python@v6
@@ -29,21 +45,11 @@ jobs:
       - name: Executar monitor
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: python monitor_confibor.py
-      
-      - name: Guardar estado no repositório
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        run: python monitor_confibor.py --state-file confibor_state.json
 
-          git pull --rebase origin main
-
-          git add confibor_state.json
-
-          if [ -z "$(git status --porcelain confibor_state.json)" ]; then
-            echo "Sem alterações para gravar."
-          exit 0
-          fi
-
-          git commit -m "Atualiza estado do monitor Confibor"
-          git push origin main
+      - name: Guardar novo estado
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: confibor_state.json
+          key: confibor-state-${{ steps.date.outputs.date }}-${{ github.run_id }}
