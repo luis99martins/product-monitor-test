@@ -3,7 +3,7 @@ name: Confibor monitor
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'  # A cada 15 minutos
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: read
@@ -12,14 +12,18 @@ jobs:
   run-monitor:
     runs-on: ubuntu-latest
     
+    concurrency:
+      group: confibor-monitor
+      cancel-in-progress: true
+
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v6
-      
+
       - name: Obter data atual
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-      
+
       - name: Restaurar estado anterior
         id: cache-restore
         uses: actions/cache/restore@v4
@@ -27,24 +31,25 @@ jobs:
           path: confibor_state.json
           key: confibor-state-${{ steps.date.outputs.date }}
           restore-keys: |
+            confibor-state-${{ steps.date.outputs.date }}-
             confibor-state-
-      
+
       - name: Instalar Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      
+
       - name: Instalar dependências
         run: pip install requests beautifulsoup4
-      
+
       - name: Executar monitor
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python monitor_confibor.py --state-file confibor_state.json
-      
+
       - name: Guardar novo estado
         uses: actions/cache/save@v4
-        if: always()  # Guarda mesmo se houver erro
+        if: always()
         with:
           path: confibor_state.json
-          key: confibor-state-${{ steps.date.outputs.date }}
+          key: confibor-state-${{ steps.date.outputs.date }}-${{ github.run_id }}
